@@ -15,4 +15,4 @@ from `package.json` using the following command:
 
 One common goal of bots running on the Geomodulus platform is contributing to the various content 
 repositories including [Corpus](/geomodulus/corpus) and [Places](/geomodulus/places). This can be
-accomplished using the Github package.
+accomplished by most contributors using a bot that built with the `github` package.

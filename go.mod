@@ -3,9 +3,10 @@ module github.com/geomodulus/robots
 go 1.20
 
 require (
-	github.com/geomodulus/citygraph v0.0.0-20230810001328-5be81c512eb4
+	github.com/geomodulus/citygraph v0.0.0-20230810025731-6c51cce774b0
 	github.com/google/go-github/v53 v53.2.0
 	github.com/paulmach/go.geojson v1.5.0
+	github.com/slack-go/slack v0.12.2
 )
 
 require (
@@ -14,6 +15,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
