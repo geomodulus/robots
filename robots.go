@@ -38,6 +38,9 @@ type SlackBot struct {
 
 // Run starts the bot.
 func (b *SlackBot) Run(ctx context.Context) {
+	// TODO(chris): How do we gracefully shutdown the socket?
+	go b.Socket.Run()
+
 	for evt := range b.Socket.Events {
 		switch evt.Type {
 		case socketmode.EventTypeEventsAPI:
