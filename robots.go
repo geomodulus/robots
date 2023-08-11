@@ -55,6 +55,7 @@ func (b *SlackBot) Run(ctx context.Context) {
 			switch ev := eventsAPIEvent.InnerEvent.Data.(type) {
 			case *slackevents.AppMentionEvent:
 				if handler, ok := b.Handler.(SlackAppMentionHandler); ok {
+					//log.Printf("⭐ app mention handler: %s", ev.Text)
 					if err := handler.HandleAppMention(ctx, ev); err != nil {
 						b.Reply(ev.Channel, ev.TimeStamp, slack.MsgOptionBlocks(
 							errorBlock(fmt.Sprintf(":warning: Error! `%s`: %v", ev.Text, err)),
@@ -64,6 +65,7 @@ func (b *SlackBot) Run(ctx context.Context) {
 
 			case *slackevents.MessageEvent:
 				if handler, ok := b.Handler.(SlackMessageHandler); ok {
+					//log.Printf("⭐ message handler: %s", ev.Text)
 					if err := handler.HandleMessage(ctx, ev); err != nil {
 						b.Reply(ev.Channel, ev.TimeStamp, slack.MsgOptionBlocks(
 							errorBlock(fmt.Sprintf(":warning: Error! `%s`: %v", ev.Text, err)),
