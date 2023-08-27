@@ -108,6 +108,11 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 		opt(&params)
 	}
 
+	var maybeArchive string
+	if params.InArchive {
+		maybeArchive = "archive/"
+	}
+
 	if params.PRNum == 0 {
 		// No PR exists, create one
 		prBranchRef, err = a.newBranchRef(ctx)
@@ -140,7 +145,7 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 
 	if params.Article != nil {
 		// articles.json
-		jsonPath := "articles/" + slug + "/article.json"
+		jsonPath :=  maybeArchive + "articles/" + slug + "/article.json"
 		jsonFileContent, err := json.MarshalIndent(params.Article, "", "  ")
 		if err != nil {
 			return 0, "", fmt.Errorf("error marshaling json: %v", err)
@@ -160,7 +165,7 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 
 	if params.BodyHTML != "" {
 		// articles.html
-		htmlPath := "articles/" + slug + "/article.html"
+		htmlPath := maybeArchive + "articles/" + slug + "/article.html"
 		prettyBody, err := prettier.Format(params.BodyHTML, htmlPath)
 		if err != nil {
 			return 0, "", fmt.Errorf("error formatting html: %v\n\noffending html:\n%s", err, params.BodyHTML)
@@ -178,7 +183,7 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 
 	if params.ArticleJS != "" {
 		// articles.js
-		jsPath := "articles/" + slug + "/article.js"
+		jsPath := maybeArchive + "articles/" + slug + "/article.js"
 		prettyJS, err := prettier.Format(params.ArticleJS, jsPath)
 		if err != nil {
 			return 0, "", fmt.Errorf("error formatting javascript: %v\n\noffending JS:\n%s", err, params.ArticleJS)
@@ -193,7 +198,7 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 	}
 
 	if params.TeaserGeoJSON != "" {
-		teaserGeoJSONPath := "articles/" + slug + "/teaser.geojson"
+		teaserGeoJSONPath := maybeArchive + "articles/" + slug + "/teaser.geojson"
 		prettyGeoJSON, err := prettier.Format(params.TeaserGeoJSON, teaserGeoJSONPath)
 		if err != nil {
 			return 0, "", fmt.Errorf("error formatting javascript: %v", err)
@@ -208,7 +213,7 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 	}
 
 	if params.TeaserJS != "" {
-		teaserJSPath := "articles/" + slug + "/teaser.js"
+		teaserJSPath := maybeArchive + "articles/" + slug + "/teaser.js"
 		prettyJS, err := prettier.Format(params.TeaserJS, teaserJSPath)
 		if err != nil {
 			return 0, "", fmt.Errorf("error formatting javascript: %v", err)
@@ -225,7 +230,7 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 	// locations.geojson
 	if (params.Article != nil) && (params.Locations != "") {
 		if len(params.Article.GeoJSONDatasets) > 0 && params.Article.GeoJSONDatasets[0].Name == "locations" {
-			locDatasetPath := "articles/" + slug + "/locations.geojson"
+			locDatasetPath := maybeArchive + "articles/" + slug + "/locations.geojson"
 			prettyGeoJSON, err := prettier.Format(params.Locations, locDatasetPath)
 			if err != nil {
 				return 0, "", fmt.Errorf("error formatting javascript: %v", err)
@@ -238,7 +243,7 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 			}
 			treeEntries = append(treeEntries, locationsTreeEntry)
 
-			locDatasetJSPath := "articles/" + slug + "/locations.js"
+			locDatasetJSPath := maybeArchive + "articles/" + slug + "/locations.js"
 			prettyLocJS, err := prettier.Format("console.debug('locations.js');", locDatasetJSPath)
 			if err != nil {
 				return 0, "", fmt.Errorf("error formatting javascript: %v", err)

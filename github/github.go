@@ -31,6 +31,7 @@ func (a *App) CreateInstallationToken(ctx context.Context) (string, error) {
 }
 
 type PullRequestParams struct {
+	InArchive     bool
 	Article       *citygraph.Article
 	Place         *citygraph.Place
 	BodyHTML      string
@@ -44,6 +45,12 @@ type PullRequestParams struct {
 }
 
 type PullRequestOption func(*PullRequestParams)
+
+func InArchive(inArchive bool) PullRequestOption {
+	return func(params *PullRequestParams) {
+		params.InArchive = inArchive
+	}
+}
 
 func WithArticle(article *citygraph.Article) PullRequestOption {
 	return func(params *PullRequestParams) {
