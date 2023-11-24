@@ -246,7 +246,7 @@ func (a *App) CreateArticleCommit(ctx context.Context, slug string, opts ...Opti
 		return "", fmt.Errorf("error creating commit: %v", err)
 	}
 
-	return *commit.SHA, nil
+	return *commit.URL, nil
 }
 
 func treeEntriesFromParams(path string, params Params) ([]*gh.TreeEntry, error) {
