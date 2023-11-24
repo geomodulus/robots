@@ -226,24 +226,28 @@ func (a *App) CreateArticleCommit(ctx context.Context, slug string, opts ...Opti
 	if err != nil {
 		return "", fmt.Errorf("error creating tree entries: %w", err)
 	}
-
-	// Step 3: Commit the changes.
 	baseSHA := ref.GetObject().GetSHA()
 	tree, _, err := a.Git.CreateTree(ctx, a.Owner, a.Repo, baseSHA, treeEntries)
 	if err != nil {
 		return "", fmt.Errorf("error creating tree: %v", err)
 	}
-	parentCommit, _, err := a.Git.GetCommit(ctx, a.Owner, a.Repo, baseSHA)
-	if err != nil {
-		return "", fmt.Errorf("error getting commit: %v", err)
-	}
+
+	// Step 3: Create the commit.
+	parent := []*gh.Commit{{SHA: ref.Object.SHA}}
 	commit, _, err := a.Git.CreateCommit(ctx, a.Owner, a.Repo, &gh.Commit{
 		Message: gh.String(params.CommitMessage),
 		Tree:    tree,
-		Parents: []*gh.Commit{parentCommit},
+		Parents: parent,
 	})
 	if err != nil {
 		return "", fmt.Errorf("error creating commit: %v", err)
+	}
+
+	// Step 4: Update the reference
+	ref.Object.SHA = commit.SHA
+	_, _, err = a.Git.UpdateRef(ctx, a.Owner, a.Repo, ref, false)
+	if err != nil {
+		return "", fmt.Errorf("error updating reference: %v", err)
 	}
 
 	return *commit.URL, nil
