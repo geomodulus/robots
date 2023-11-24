@@ -94,14 +94,14 @@ func (a *App) FetchArticle(ctx context.Context, slug string) (*ArticleCheckout, 
 	return res, nil
 }
 
-func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string, opts ...PullRequestOption) (int, string, error) {
+func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string, opts ...Option) (int, string, error) {
 	var (
 		prBranchRef *gh.Reference
 		activePR    *gh.PullRequest
 		err         error
 	)
 
-	params := PullRequestParams{
+	params := Params{
 		PRBody: "This PR was created dynamically.",
 	}
 	for _, opt := range opts {
@@ -112,6 +112,8 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 	if params.InArchive {
 		maybeArchive = "archive/"
 	}
+
+	articlePath := maybeArchive + "articles/" + slug
 
 	if params.PRNum == 0 {
 		// No PR exists, create one
@@ -141,121 +143,9 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 		}
 	}
 
-	treeEntries := []*gh.TreeEntry{}
-
-	if params.Article != nil {
-		// articles.json
-		jsonPath :=  maybeArchive + "articles/" + slug + "/article.json"
-		jsonFileContent, err := json.MarshalIndent(params.Article, "", "  ")
-		if err != nil {
-			return 0, "", fmt.Errorf("error marshaling json: %v", err)
-		}
-		prettyJSONFileContent, err := prettier.Format(string(jsonFileContent), jsonPath)
-		if err != nil {
-			return 0, "", fmt.Errorf("error formatting json: %v", err)
-		}
-		jsonTreeEntry := &gh.TreeEntry{
-			Path:    gh.String(jsonPath),
-			Mode:    gh.String("100644"),
-			Type:    gh.String("blob"),
-			Content: gh.String(string(prettyJSONFileContent)),
-		}
-		treeEntries = append(treeEntries, jsonTreeEntry)
-	}
-
-	if params.BodyHTML != "" {
-		// articles.html
-		htmlPath := maybeArchive + "articles/" + slug + "/article.html"
-		prettyBody, err := prettier.Format(params.BodyHTML, htmlPath)
-		if err != nil {
-			return 0, "", fmt.Errorf("error formatting html: %v\n\noffending html:\n%s", err, params.BodyHTML)
-		}
-		//	fmt.Println("saving", article.Slug, "to", htmlPath)
-		//	fmt.Println(body)
-		htmlTreeEntry := &gh.TreeEntry{
-			Path:    gh.String(htmlPath),
-			Mode:    gh.String("100644"),
-			Type:    gh.String("blob"),
-			Content: gh.String(prettyBody),
-		}
-		treeEntries = append(treeEntries, htmlTreeEntry)
-	}
-
-	if params.ArticleJS != "" {
-		// articles.js
-		jsPath := maybeArchive + "articles/" + slug + "/article.js"
-		prettyJS, err := prettier.Format(params.ArticleJS, jsPath)
-		if err != nil {
-			return 0, "", fmt.Errorf("error formatting javascript: %v\n\noffending JS:\n%s", err, params.ArticleJS)
-		}
-		jsTreeEntry := &gh.TreeEntry{
-			Path:    gh.String(jsPath),
-			Mode:    gh.String("100644"),
-			Type:    gh.String("blob"),
-			Content: gh.String(prettyJS),
-		}
-		treeEntries = append(treeEntries, jsTreeEntry)
-	}
-
-	if params.TeaserGeoJSON != "" {
-		teaserGeoJSONPath := maybeArchive + "articles/" + slug + "/teaser.geojson"
-		prettyGeoJSON, err := prettier.Format(params.TeaserGeoJSON, teaserGeoJSONPath)
-		if err != nil {
-			return 0, "", fmt.Errorf("error formatting javascript: %v", err)
-		}
-		teaserGeoJSONTreeEntry := &gh.TreeEntry{
-			Path:    gh.String(teaserGeoJSONPath),
-			Mode:    gh.String("100644"),
-			Type:    gh.String("blob"),
-			Content: gh.String(prettyGeoJSON),
-		}
-		treeEntries = append(treeEntries, teaserGeoJSONTreeEntry)
-	}
-
-	if params.TeaserJS != "" {
-		teaserJSPath := maybeArchive + "articles/" + slug + "/teaser.js"
-		prettyJS, err := prettier.Format(params.TeaserJS, teaserJSPath)
-		if err != nil {
-			return 0, "", fmt.Errorf("error formatting javascript: %v", err)
-		}
-		teaserJSTreeEntry := &gh.TreeEntry{
-			Path:    gh.String(teaserJSPath),
-			Mode:    gh.String("100644"),
-			Type:    gh.String("blob"),
-			Content: gh.String(prettyJS),
-		}
-		treeEntries = append(treeEntries, teaserJSTreeEntry)
-	}
-
-	// locations.geojson
-	if (params.Article != nil) && (params.Locations != "") {
-		if len(params.Article.GeoJSONDatasets) > 0 && params.Article.GeoJSONDatasets[0].Name == "locations" {
-			locDatasetPath := maybeArchive + "articles/" + slug + "/locations.geojson"
-			prettyGeoJSON, err := prettier.Format(params.Locations, locDatasetPath)
-			if err != nil {
-				return 0, "", fmt.Errorf("error formatting javascript: %v", err)
-			}
-			locationsTreeEntry := &gh.TreeEntry{
-				Path:    gh.String(locDatasetPath),
-				Mode:    gh.String("100644"),
-				Type:    gh.String("blob"),
-				Content: gh.String(prettyGeoJSON),
-			}
-			treeEntries = append(treeEntries, locationsTreeEntry)
-
-			locDatasetJSPath := maybeArchive + "articles/" + slug + "/locations.js"
-			prettyLocJS, err := prettier.Format("console.debug('locations.js');", locDatasetJSPath)
-			if err != nil {
-				return 0, "", fmt.Errorf("error formatting javascript: %v", err)
-			}
-			locationsJSTreeEntry := &gh.TreeEntry{
-				Path:    gh.String(locDatasetJSPath),
-				Mode:    gh.String("100644"),
-				Type:    gh.String("blob"),
-				Content: gh.String(prettyLocJS),
-			}
-			treeEntries = append(treeEntries, locationsJSTreeEntry)
-		}
+	treeEntries, err := treeEntriesFromParams(articlePath, params)
+	if err != nil {
+		return 0, "", fmt.Errorf("error creating tree entries: %w", err)
 	}
 
 	// Commit the changes.
@@ -310,4 +200,220 @@ func (a *App) CreateOrUpdateArticlePullRequest(ctx context.Context, slug string,
 	}
 
 	return activePR.GetNumber(), activePR.GetHTMLURL(), nil
+}
+
+func (a *App) CreateArticleCommit(ctx context.Context, slug string, opts ...Option) (string, error) {
+	params := Params{}
+	for _, opt := range opts {
+		opt(&params)
+	}
+
+	var maybeArchive string
+	if params.InArchive {
+		maybeArchive = "archive/"
+	}
+
+	articlePath := maybeArchive + "articles/" + slug
+
+	// Step 1: Get the latest commit of the branch
+	ref, _, err := a.Git.GetRef(ctx, a.Owner, a.Repo, "refs/heads/main")
+	if err != nil {
+		panic(err)
+	}
+
+	// Step 2: Create a tree with the new article
+	treeEntries, err := treeEntriesFromParams(articlePath, params)
+	if err != nil {
+		return "", fmt.Errorf("error creating tree entries: %w", err)
+	}
+
+	// Step 3: Commit the changes.
+	baseSHA := ref.GetObject().GetSHA()
+	tree, _, err := a.Git.CreateTree(ctx, a.Owner, a.Repo, baseSHA, treeEntries)
+	if err != nil {
+		return "", fmt.Errorf("error creating tree: %v", err)
+	}
+	parentCommit, _, err := a.Git.GetCommit(ctx, a.Owner, a.Repo, baseSHA)
+	if err != nil {
+		return "", fmt.Errorf("error getting commit: %v", err)
+	}
+	commit, _, err := a.Git.CreateCommit(ctx, a.Owner, a.Repo, &gh.Commit{
+		Message: gh.String(params.CommitMessage),
+		Tree:    tree,
+		Parents: []*gh.Commit{parentCommit},
+	})
+	if err != nil {
+		return "", fmt.Errorf("error creating commit: %v", err)
+	}
+
+	return *commit.SHA, nil
+}
+
+func treeEntriesFromParams(path string, params Params) ([]*gh.TreeEntry, error) {
+	treeEntries := []*gh.TreeEntry{}
+
+	if params.Article != nil {
+		entry, err := articleTreeEntry(path, params.Article)
+		if err != nil {
+			return nil, fmt.Errorf("error creating article tree entry: %w", err)
+		}
+		treeEntries = append(treeEntries, entry)
+	}
+
+	if params.BodyHTML != "" {
+		// articles.html
+		htmlTreeEntry, err := articleBodyHTML(path, params.BodyHTML)
+		if err != nil {
+			return nil, fmt.Errorf("error creating article body html tree entry: %w", err)
+		}
+		treeEntries = append(treeEntries, htmlTreeEntry)
+	}
+
+	if params.ArticleJS != "" {
+		// articles.js
+		jsTreeEntry, err := articleJS(path, params.ArticleJS)
+		if err != nil {
+			return nil, fmt.Errorf("error creating article js tree entry: %w", err)
+		}
+		treeEntries = append(treeEntries, jsTreeEntry)
+	}
+
+	if params.TeaserGeoJSON != "" {
+		// teaser.geojson
+		entry, err := articleTeaserGeoJSON(path, params.TeaserGeoJSON)
+		if err != nil {
+			return nil, fmt.Errorf("error creating article teaser geojson tree entry: %w", err)
+		}
+		treeEntries = append(treeEntries, entry)
+	}
+
+	if params.TeaserJS != "" {
+		// teaser.js
+		entry, err := articleTeaserJS(path, params.TeaserJS)
+		if err != nil {
+			return nil, fmt.Errorf("error creating article teaser js tree entry: %w", err)
+		}
+		treeEntries = append(treeEntries, entry)
+	}
+
+	if (params.Article != nil) && (params.Locations != "") {
+		// locations.geojson
+		if len(params.Article.GeoJSONDatasets) > 0 && params.Article.GeoJSONDatasets[0].Name == "locations" {
+			entries, err := articleGeoJSONDatasets(path, params.Locations)
+			if err != nil {
+				return nil, fmt.Errorf("error creating article geojson datasets tree entries: %w", err)
+			}
+			treeEntries = append(treeEntries, entries...)
+		}
+	}
+
+	return treeEntries, nil
+}
+
+func articleTreeEntry(path string, article *citygraph.Article) (*gh.TreeEntry, error) {
+	// articles.json
+	jsonPath := path + "/article.json"
+	jsonFileContent, err := json.MarshalIndent(article, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling json: %w", err)
+	}
+	prettyJSONFileContent, err := prettier.Format(string(jsonFileContent), jsonPath)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting json: %w", err)
+	}
+
+	return &gh.TreeEntry{
+		Path:    gh.String(jsonPath),
+		Mode:    gh.String("100644"),
+		Type:    gh.String("blob"),
+		Content: gh.String(string(prettyJSONFileContent)),
+	}, nil
+}
+
+func articleBodyHTML(path string, bodyHTML string) (*gh.TreeEntry, error) {
+	htmlPath := path + "/article.html"
+	prettyBody, err := prettier.Format(bodyHTML, htmlPath)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting html: %v\n\noffending html:\n%s", err, bodyHTML)
+	}
+	return &gh.TreeEntry{
+		Path:    gh.String(htmlPath),
+		Mode:    gh.String("100644"),
+		Type:    gh.String("blob"),
+		Content: gh.String(prettyBody),
+	}, nil
+}
+
+func articleJS(path string, js string) (*gh.TreeEntry, error) {
+	jsPath := path + "/article.js"
+	prettyJS, err := prettier.Format(js, jsPath)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting javascript: %v\n\noffending javascript:\n%s", err, js)
+	}
+	return &gh.TreeEntry{
+		Path:    gh.String(jsPath),
+		Mode:    gh.String("100644"),
+		Type:    gh.String("blob"),
+		Content: gh.String(prettyJS),
+	}, nil
+}
+
+func articleTeaserGeoJSON(path string, geoJSON string) (*gh.TreeEntry, error) {
+	geoJSONPath := path + "/teaser.geojson"
+	prettyGeoJSON, err := prettier.Format(geoJSON, geoJSONPath)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting javascript: %v", err)
+	}
+	return &gh.TreeEntry{
+		Path:    gh.String(geoJSONPath),
+		Mode:    gh.String("100644"),
+		Type:    gh.String("blob"),
+		Content: gh.String(prettyGeoJSON),
+	}, nil
+}
+
+func articleTeaserJS(path string, js string) (*gh.TreeEntry, error) {
+	jsPath := path + "/teaser.js"
+	prettyJS, err := prettier.Format(js, jsPath)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting javascript: %v", err)
+	}
+	return &gh.TreeEntry{
+		Path:    gh.String(jsPath),
+		Mode:    gh.String("100644"),
+		Type:    gh.String("blob"),
+		Content: gh.String(prettyJS),
+	}, nil
+}
+
+func articleGeoJSONDatasets(path string, locations string) ([]*gh.TreeEntry, error) {
+	treeEntries := []*gh.TreeEntry{}
+
+	locDatasetPath := path + "/locations.geojson"
+	prettyGeoJSON, err := prettier.Format(locations, locDatasetPath)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting javascript: %v", err)
+	}
+	locationsTreeEntry := &gh.TreeEntry{
+		Path:    gh.String(locDatasetPath),
+		Mode:    gh.String("100644"),
+		Type:    gh.String("blob"),
+		Content: gh.String(prettyGeoJSON),
+	}
+	treeEntries = append(treeEntries, locationsTreeEntry)
+
+	locDatasetJSPath := path + "/locations.js"
+	prettyLocJS, err := prettier.Format("console.debug('locations.js');", locDatasetJSPath)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting javascript: %v", err)
+	}
+	locationsJSTreeEntry := &gh.TreeEntry{
+		Path:    gh.String(locDatasetJSPath),
+		Mode:    gh.String("100644"),
+		Type:    gh.String("blob"),
+		Content: gh.String(prettyLocJS),
+	}
+	treeEntries = append(treeEntries, locationsJSTreeEntry)
+
+	return treeEntries, nil
 }

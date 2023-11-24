@@ -60,14 +60,14 @@ func (a *App) FetchPlace(ctx context.Context, slug string) (*PlaceCheckout, erro
 	return res, nil
 }
 
-func (a *App) CreateOrUpdatePlacePullRequest(ctx context.Context, slug string, opts ...PullRequestOption) (int, string, error) {
+func (a *App) CreateOrUpdatePlacePullRequest(ctx context.Context, slug string, opts ...Option) (int, string, error) {
 	var (
 		prBranchRef *gh.Reference
 		activePR    *gh.PullRequest
 		err         error
 	)
 
-	params := PullRequestParams{
+	params := Params{
 		PRBody: "This PR was created dynamically.",
 	}
 	for _, opt := range opts {

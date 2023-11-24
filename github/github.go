@@ -30,13 +30,14 @@ func (a *App) CreateInstallationToken(ctx context.Context) (string, error) {
 	return token.GetToken(), nil
 }
 
-type PullRequestParams struct {
+type Params struct {
 	InArchive     bool
 	Article       *citygraph.Article
 	Place         *citygraph.Place
 	BodyHTML      string
 	ArticleJS     string
 	Locations     string
+	CommitMessage string
 	PRTitle       string
 	PRBody        string
 	PRNum         int
@@ -44,70 +45,76 @@ type PullRequestParams struct {
 	TeaserJS      string
 }
 
-type PullRequestOption func(*PullRequestParams)
+type Option func(*Params)
 
-func InArchive(inArchive bool) PullRequestOption {
-	return func(params *PullRequestParams) {
+func InArchive(inArchive bool) Option {
+	return func(params *Params) {
 		params.InArchive = inArchive
 	}
 }
 
-func WithArticle(article *citygraph.Article) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithArticle(article *citygraph.Article) Option {
+	return func(params *Params) {
 		params.Article = article
 	}
 }
 
-func WithPlace(place *citygraph.Place) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithPlace(place *citygraph.Place) Option {
+	return func(params *Params) {
 		params.Place = place
 	}
 }
 
-func WithBodyHTML(bodyHTML string) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithBodyHTML(bodyHTML string) Option {
+	return func(params *Params) {
 		params.BodyHTML = bodyHTML
 	}
 }
 
-func WithArticleJS(articleJS string) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithArticleJS(articleJS string) Option {
+	return func(params *Params) {
 		params.ArticleJS = articleJS
 	}
 }
 
-func WithLocations(locations string) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithLocations(locations string) Option {
+	return func(params *Params) {
 		params.Locations = locations
 	}
 }
 
-func WithPRNum(prNum int) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithCommitMessage(msg string) Option {
+	return func(params *Params) {
+		params.CommitMessage = msg
+	}
+}
+
+func WithPRNum(prNum int) Option {
+	return func(params *Params) {
 		params.PRNum = prNum
 	}
 }
 
-func WithPRTitle(prTitle string) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithPRTitle(prTitle string) Option {
+	return func(params *Params) {
 		params.PRTitle = prTitle
 	}
 }
 
-func WithPRBody(prBody string) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithPRBody(prBody string) Option {
+	return func(params *Params) {
 		params.PRBody = prBody
 	}
 }
 
-func WithTeaserGeoJSON(geojson string) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithTeaserGeoJSON(geojson string) Option {
+	return func(params *Params) {
 		params.TeaserGeoJSON = geojson
 	}
 }
 
-func WithTeaserJS(js string) PullRequestOption {
-	return func(params *PullRequestParams) {
+func WithTeaserJS(js string) Option {
+	return func(params *Params) {
 		params.TeaserJS = js
 	}
 }
